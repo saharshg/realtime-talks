@@ -1,0 +1,33 @@
+/* Your styles goes here. */
+.slide {
+  width: 100vw;
+  height: 100vh;
+  background-color: beige;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.bigText {
+  font-size: 5rem;
+}
+
+.sentimentContainer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sentiment {
+  width: calc(50vw - 3rem);
+}
+
+.sr-only:not(:focus):not(:active) {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
