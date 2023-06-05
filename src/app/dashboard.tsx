@@ -1,8 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useEffect, useState } from 'react';
 import styles from './dashboard.module.css';
-// @ts-ignore
-import { supabase } from './supabaseClient';
+import { supabase } from '../supabaseClient';
+import { useAuth } from 'src/hooks/useAuth';
 
 type Profile = {
   name: string;
@@ -11,35 +10,49 @@ type Profile = {
 
 export function App() {
   const [profiles, setProfiles] = useState<any>([]);
+  const [myFood, setMyFood] = useState([]);
+  const { currentUser } = useAuth();
+
+  const fetchProfiles = async () => {
+    const { data } = await supabase
+      .from('profile')
+      .select('*')
+      .neq('user_id', currentUser.id);
+
+    setProfiles(data);
+  };
+
+  const getMyFood = () => {
+    supabase
+      .from('food')
+      .select('value')
+      .eq('user_id', currentUser?.id)
+      .then(({ data }: { data: any }) => {
+        setMyFood(data);
+      });
+  };
   useEffect(() => {
-    const handleFoodChange = async (payload: any) => {
-      const { data, error } = await supabase
-        .from('users')
-        .select(payload.new.user_id);
-      console.log(data, error);
-    };
-    const channel = supabase
-      .channel('food_changes')
+    fetchProfiles();
+    getMyFood();
+
+    const foodUpdateChannel = supabase
+      .channel('food-update-channel')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'food',
+          filter: `user_id=eq.${currentUser?.id}`,
         },
-        handleFoodChange
+        () => {
+          getMyFood();
+        }
       )
       .subscribe();
 
-    const fetchProfiles = async () => {
-      const { data } = await supabase.from('profile').select('*');
-
-      setProfiles(data);
-    };
-    fetchProfiles();
-
     return () => {
-      supabase.removeChannel(channel);
+      foodUpdateChannel.unsubscribe();
     };
   }, []);
 
@@ -48,16 +61,36 @@ export function App() {
 
     await supabase
       .from('food')
-      .insert({ value: e.target.elements.food.value, user_id: user.id });
+      .insert({ value: e.target.elements.food.value, user_id: currentUser.id });
   };
 
   return (
     <>
       <form onSubmit={storeFood}>
-        <h1>What are you eating?</h1>
+        <h1>Hi, {currentUser?.user_metadata?.name}!</h1>
+        <h2>What are you eating?</h2>
         <input name="food" type="text" />
       </form>
       <section className={styles.mainContent}>
+        <ul>
+          {myFood.map(({ value }) => {
+            const randomColor = Math.floor(Math.random() * 16777215).toString(
+              16
+            );
+            return (
+              <li
+                key={value}
+                style={{
+                  color: `#${randomColor}`,
+                  listStyle: 'none',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {value}
+              </li>
+            );
+          })}
+        </ul>
         <ul>
           {profiles.map((profile: Profile) => (
             <li key={profile.id}>{profile.name}</li>
