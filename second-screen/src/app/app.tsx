@@ -15,16 +15,19 @@ export function App() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
     });
+
     if (error) {
       console.log(error);
     }
   };
 
+  // fix unnecessary calling
   useEffect(() => {
     const loadUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       setUser(user);
     };
 
@@ -35,30 +38,30 @@ export function App() {
     loadUser();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profile')
+        .insert({ name: user?.user_metadata.name, user_id: user.id });
+    }
+  }, [user]);
+
   if (!user) {
     return <button onClick={signInWithGitHub}>Login</button>;
   }
 
-  const createVote = async (e: any) => {
+  const storeFood = async (e: any) => {
     e.preventDefault();
+
     await supabase
-      .from('sentiment')
-      .insert({ value: e.nativeEvent.submitter.name, user_id: user.id });
+      .from('food')
+      .insert({ value: e.target.elements.food.value, user_id: user.id });
   };
 
   return (
-    <form onSubmit={createVote}>
-      <h1>How do you feel about his non-sense?</h1>
-      <button name="good">
-        <span role="img" aria-label="yum face">
-          😋
-        </span>
-      </button>
-      <button name="bad">
-        <span role="img" aria-label="angry face">
-          😡
-        </span>
-      </button>
+    <form onSubmit={storeFood}>
+      <h1>What are you eating?</h1>
+      <input name="food" type="text" />
     </form>
   );
 }
